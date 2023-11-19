@@ -12,14 +12,6 @@ def get_neighbours(x, y):
     return [(grid[y + dy][x + dx], (x + dx, y + dy)) for dx, dy in ways if check_neighbour(x + dx, y + dy)]
 
 
-# def get_click_mouse_pos():
-#     x, y = pg.mouse.get_pos()
-#     grid_x, grid_y = x // TILE, y // TILE
-#     pg.draw.circle(sc, pg.Color('red'), *get_circle(grid_x, grid_y))
-#     click = pg.mouse.get_pressed()
-#     return (grid_x, grid_y) if click[0] else False
-
-
 def get_arrow_key_pos():
     global x, y
     events = pg.event.get()
@@ -74,7 +66,7 @@ def dijkstra(start, goal, graph):
                 heappush(queue, (priority, neigh_node))
                 cost_visited[neigh_node] = new_cost
                 visited[neigh_node] = cur_node
-    return visited
+    return visited, cost_visited.get(goal, float('inf'))
 
 
 def computer_move(path_segment):
@@ -124,50 +116,60 @@ for y, row in enumerate(grid):
     for x, col in enumerate(row):
         graph[(x, y)] = graph.get((x, y), []) + get_neighbours(x, y)
 
-start = (0, 7)
-goal = (22, 7)
+start = (0, 6)
+# goal = (22, 7)
+goal = (22, 4)
 queue = []
 heappush(queue, (0, start))
 visited = {start: None}
 blues = []
 
+path_cost = 0.0
+
 bg = pg.image.load('img/underground_dungeon.png').convert()
 bg = pg.transform.scale(bg, (cols * TILE, rows * TILE))
-x, y = 1122, 362
+x, y = 1122, 212
+counter = 0
 while True:
     # fill screen
     sc.blit(bg, (0, 0))
 
     # get path to mouse click
-    # mouse_pos = get_click_mouse_pos()
-    mouse_pos = get_arrow_key_pos()
-    if mouse_pos:
-        visited = dijkstra(start, mouse_pos, graph)
-        goal = mouse_pos
+    player_pos = get_arrow_key_pos()
+    if player_pos:
+        visited, path_cost = dijkstra(start, player_pos, graph)
+        goal = player_pos
+
+    font = pg.font.Font(None, 30)
 
     # draw path
+    path_length = 0
     path_head, path_segment = goal, goal
     while path_segment and path_segment in visited:
         if path_segment != start and path_segment != visited.get(start):
             pg.draw.circle(sc, pg.Color('blue'), *get_circle(*path_segment))
-        # print(path_segment)
+            path_length += 1
         blues.append(path_segment)
         path_segment = visited[path_segment]
-    # print("\n")
-    # print(blues)
-    # print(blues[len(blues) - 1])
-    # print("\n\n")
     pg.draw.circle(sc, pg.Color('green'), *get_circle(*start))
     pg.draw.circle(sc, pg.Color('magenta'), *get_circle(*path_head))
     if len(blues) > 1:
         computer_move(blues[-2])
 
-    if mouse_pos and start == goal:
-        break
+    font = pg.font.Font(None, 30)
+    text = font.render(f"Path length: {path_length}", True, pg.Color('white'))
+    sc.blit(text, (10, 10))
+    text1 = font.render(f"Path cost: {path_cost}", True, pg.Color('white'))
+    sc.blit(text1, (10, 40))
+
+    if player_pos == goal and start == goal:
+        counter += 1
+        path_cost = 0
+        if counter >= 2:
+            break
 
     # pygame necessary lines
     [exit() for event in pg.event.get() if event.type == pg.QUIT]
     pg.display.flip()
     clock.tick(30)
-
 input()
